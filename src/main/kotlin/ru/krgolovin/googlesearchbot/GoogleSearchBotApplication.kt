@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class GoogleSearchBotApplication
 
 fun main(args: Array<String>) {
-	runApplication<GoogleSearchBotApplication>(*args)
+    runApplication<GoogleSearchBotApplication>(*args)
 }

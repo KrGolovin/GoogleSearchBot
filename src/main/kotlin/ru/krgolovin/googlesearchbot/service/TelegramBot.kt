@@ -1,15 +1,18 @@
 package ru.krgolovin.googlesearchbot.service
 
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 import ru.krgolovin.googlesearchbot.commands.MessageCommand
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.locks.ReentrantLock
 
 
-@Service
+@Component
 class TelegramBot(
     @Value("\${bot.username}") private val username: String,
     @Value("\${bot.token}") private val token: String,
@@ -20,6 +23,7 @@ class TelegramBot(
     override fun getBotUsername(): String = username
 
     override fun onUpdateReceived(update: Update) {
+        println("thread: ${Thread.currentThread().id}")
         when {
             update.hasMessage() -> {
                 onMessageReceived(update.message ?: return)
@@ -38,7 +42,21 @@ class TelegramBot(
                     sendMessage(
                         chatId, "Unknown command, say /help to explore all available commands..."
                     )
-                } else execute(currentCommand.onCall(message) ?: return)
+                } else {
+                    pool.execute {
+                        try {
+                            val response = currentCommand.onCall(message)
+                            executeLock.lock()
+                            if (response != null) execute(response)
+                        } catch (e: Exception) {
+                            sendMessage(
+                                chatId, "Something goes wrung"
+                            )
+                        } finally {
+                            executeLock.unlock()
+                        }
+                    }
+                }
             }
             else -> {
                 sendMessage(chatId, "Enter command. Write /help to show all commands...")
@@ -50,5 +68,8 @@ class TelegramBot(
         val messageToSend = SendMessage(chatId.toString(), text)
         execute(messageToSend)
     }
-}
 
+    private val pool: ExecutorService = Executors.newFixedThreadPool(16)
+
+    private val executeLock = ReentrantLock()
+}
