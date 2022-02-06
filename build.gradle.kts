@@ -34,8 +34,6 @@ dependencies {
 
 	implementation("com.squareup.okhttp3:okhttp:4.9.0")
 
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
-
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")

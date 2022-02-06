@@ -23,7 +23,6 @@ class TelegramBot(
     override fun getBotUsername(): String = username
 
     override fun onUpdateReceived(update: Update) {
-        println("thread: ${Thread.currentThread().id}")
         when {
             update.hasMessage() -> {
                 onMessageReceived(update.message ?: return)
@@ -52,6 +51,7 @@ class TelegramBot(
                             sendMessage(
                                 chatId, "Something goes wrung"
                             )
+                            throw e
                         } finally {
                             executeLock.unlock()
                         }

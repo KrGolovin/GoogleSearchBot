@@ -1,11 +1,12 @@
 package ru.krgolovin.googlesearchbot.commands
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Message
-import ru.krgolovin.googlesearchbot.api.PlaceholderSearchApi
-import ru.krgolovin.googlesearchbot.model.Post
+import ru.krgolovin.googlesearchbot.api.GoogleSearchApi
+import ru.krgolovin.googlesearchbot.model.SearchResult
 
 interface MessageCommand {
     val name: String
@@ -53,25 +54,28 @@ final class HelpCommand(@Autowired messageCommands: List<MessageCommand>) : Mess
 }
 
 @Component
-final class PostCommand(@Autowired val placeholderSearchApi: PlaceholderSearchApi) : MessageCommand {
+final class SearchCommand(
+    @Autowired val googleSearchApi: GoogleSearchApi,
+    @Value("\${serpapi.key}") private val apiKey: String,
+) : MessageCommand {
     override val name: String
-        get() = "/post"
+        get() = "/search"
     override val description: String
-        get() = "Get info about post"
+        get() = "Get first result in google about this query"
 
 
     override fun onCall(message: Message): SendMessage? {
         val answer = message.text?.removePrefix(name) ?: return null
-        val number =
-            answer.trim().toIntOrNull() ?: return SendMessage(message.chatId.toString(), "Incorrect number of post")
-        val result = getPostResult(number) ?: return SendMessage(message.chatId.toString(), "Cannot find your post")
-        return SendMessage(message.chatId.toString(), result.toString())
+        if (answer.isEmpty()) return SendMessage(message.chatId.toString(), "Nothing to search")
+        val result = getSearchResult(answer) ?: return SendMessage(message.chatId.toString(), "Cannot find your query")
+        return SendMessage(message.chatId.toString(), "title:\n${result.title}\nlink:\n${result.link}")
     }
 
-    private fun getPostResult(number: Int): Post? {
-        val a = placeholderSearchApi.getPost(number).execute()
+    private fun getSearchResult(query: String): SearchResult? {
+        val queryResultResponse = googleSearchApi.getSearchResult(query, apiKey).execute()
         return when {
-            a.isSuccessful -> a.body()
+            queryResultResponse.isSuccessful ->
+                queryResultResponse.body()?.result?.getOrNull(0)
             else -> null
         }
     }

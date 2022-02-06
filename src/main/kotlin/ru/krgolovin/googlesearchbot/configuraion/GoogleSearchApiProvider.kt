@@ -1,4 +1,4 @@
-package ru.krgolovin.googlesearchbot.service
+package ru.krgolovin.googlesearchbot.configuraion
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -8,25 +8,26 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Scope
 import retrofit2.Retrofit
-import ru.krgolovin.googlesearchbot.api.PlaceholderSearchApi
+import ru.krgolovin.googlesearchbot.api.GoogleSearchApi
 
 
 @Configuration
-class PlaceholderSearchApiProvider {
+class GoogleSearchApiProvider {
     @ExperimentalSerializationApi
     @Bean
     @Scope("singleton")
-    fun getPlaceholderSearchApi(): PlaceholderSearchApi {
+    fun getGoogleSearchApi(): GoogleSearchApi {
         val contentType = "application/json".toMediaType()
         val json = Json {
             prettyPrint = true
             ignoreUnknownKeys = true
+            explicitNulls = false
         }
         return Retrofit.Builder().baseUrl(serverUrl).addConverterFactory(json.asConverterFactory(contentType)).build()
-            .create(PlaceholderSearchApi::class.java)
+            .create(GoogleSearchApi::class.java)
     }
 
     companion object {
-        private const val serverUrl = "https://jsonplaceholder.typicode.com/"
+        private const val serverUrl = "https://serpapi.com/"
     }
 }
