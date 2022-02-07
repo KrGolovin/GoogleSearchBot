@@ -20,7 +20,7 @@ final class SearchCommand(
 
 
     override fun onCall(message: Message): SendMessage? {
-        val answer = message.text?.removePrefix(name) ?: return null
+        val answer = message.text?.removePrefix(name)?.trim() ?: return null
         if (answer.isEmpty()) return SendMessage(message.chatId.toString(), "Nothing to search")
         val result = getSearchResult(answer) ?: return SendMessage(message.chatId.toString(), "Cannot find your query")
         return SendMessage(message.chatId.toString(), "title:\n${result.title}\nlink:\n${result.link}")

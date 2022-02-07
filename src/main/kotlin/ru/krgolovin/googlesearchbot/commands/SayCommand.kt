@@ -12,7 +12,7 @@ final class SayCommand : MessageCommand {
         get() = "Say what you say"
 
     override fun onCall(message: Message): SendMessage? {
-        val responseText = message.text?.removePrefix(name) ?: return null
+        val responseText = message.text?.removePrefix(name)?.trim() ?: return null
         if (responseText.isEmpty()) return SendMessage(message.chatId.toString(), "You didn't say anything")
         return SendMessage(message.chatId.toString(), responseText)
     }
