@@ -1,5 +1,6 @@
 package ru.krgolovin.googlesearchbot.service
 
+import org.jetbrains.annotations.TestOnly
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
@@ -7,6 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 import ru.krgolovin.googlesearchbot.commands.MessageCommand
+import ru.krgolovin.googlesearchbot.utils.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
@@ -30,43 +32,39 @@ class TelegramBot(
         }
     }
 
+    @TestOnly
+    fun getMessageResult(chatId: Long, text: String): Result = when {
+        text.startsWith("/") -> {
+            val currentCommand = messageCommands.firstOrNull { messageCommand -> text.startsWith(messageCommand.name) }
+            if (currentCommand == null) {
+                UnknownCommandError(chatId)
+            } else {
+                Result.Success(currentCommand)
+            }
+        }
+        else -> NotCommandError(chatId)
+    }
+
     private fun onMessageReceived(message: Message) {
         val chatId = message.chatId
         val text = if (message.hasText()) message.text else return
-        when {
-            text.startsWith("/") -> {
-                val currentCommand =
-                    messageCommands.firstOrNull { messageCommand -> text.startsWith(messageCommand.name) }
-                if (currentCommand == null) {
-                    sendMessage(
-                        chatId, "Unknown command, say /help to explore all available commands..."
-                    )
-                } else {
-                    pool.execute {
-                        try {
-                            val response = currentCommand.onCall(message)
-                            executeLock.lock()
-                            if (response != null) execute(response)
-                        } catch (e: Exception) {
-                            sendMessage(
-                                chatId, "Something goes wrung"
-                            )
-                            throw e
-                        } finally {
-                            executeLock.unlock()
-                        }
+        when (val result: Result = getMessageResult(chatId, text)) {
+            is Result.Error -> execute(result.getSendMessage())
+            is Result.Success -> {
+                pool.execute {
+                    try {
+                        val response = result.command.onCall(message)
+                        executeLock.lock()
+                        if (response != null) execute(response)
+                    } catch (e: Exception) {
+                        val messageToSend = SendMessage(chatId.toString(), text)
+                        execute(messageToSend)
+                    } finally {
+                        executeLock.unlock()
                     }
                 }
             }
-            else -> {
-                sendMessage(chatId, "Enter command. Write /help to show all commands...")
-            }
         }
-    }
-
-    private fun sendMessage(chatId: Long, text: String) {
-        val messageToSend = SendMessage(chatId.toString(), text)
-        execute(messageToSend)
     }
 
     private val pool: ExecutorService = Executors.newFixedThreadPool(16)

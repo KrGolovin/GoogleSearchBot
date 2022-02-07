@@ -28,6 +28,6 @@ class GoogleSearchApiProvider {
     }
 
     companion object {
-        private const val serverUrl = "https://serpapi.com/"
+        private const val serverUrl = "http://serpapi.com/"
     }
 }
